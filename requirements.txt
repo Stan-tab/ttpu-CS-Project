@@ -16,8 +16,10 @@ multidict==6.6.4
 mypy_extensions==1.1.0
 packaging==25.0
 pathspec==0.12.1
+peewee==3.18.2
 platformdirs==4.4.0
 propcache==0.3.2
+psycopg2==2.9.10
 pydantic==2.11.10
 pydantic_core==2.33.2
 python-dotenv==1.1.1

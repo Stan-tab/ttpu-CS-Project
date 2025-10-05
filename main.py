@@ -9,7 +9,7 @@ from aiogram.enums import ParseMode
 import aiogram.filters as filters
 from aiogram.types import Message
 from components.dictioanary import useSentences
-from components.subFunctions import desiredSentence
+from components.subFunctions import *
 
 load_dotenv()
 TOKEN = getenv("API_TOKEN")
@@ -23,6 +23,8 @@ async def main():
 
 @dp.message(filters.CommandStart())
 async def welcome(message: Message):
+    user = createUser(message.from_user.username, message.from_user.id)
+    print(user)
     answer = useSentences(
         desiredSentence(message.from_user.language_code, ["greeting"]),
         [message.from_user.full_name],
