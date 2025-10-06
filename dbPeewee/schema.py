@@ -36,13 +36,23 @@ class User(BaseModel):
 
 
 class Audio(BaseModel):
-    id = CharField()
+    tgId = CharField()
+    name = CharField()
     user = ForeignKeyField(User, backref="audio")
     timing = ArrayField(CharField)
+    tags = ArrayField(CharField)
+    uses = IntegerField(default=0)
+
+    @staticmethod
+    def updateNameByTgid(id, name):
+        query = Audio.update(name=name).where(Audio.tgId == id)
+        query.execute()
+        return Audio.get(Audio.tgId == id)
 
 
 if __name__ == "__main__":
     db.connect()
+    # db.drop_tables([User, Audio])
     db.create_tables([User, Audio])
     print("Tables 'User' and 'Audio' created successfully.")
     db.close()
