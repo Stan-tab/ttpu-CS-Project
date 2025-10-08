@@ -67,10 +67,23 @@ class Audio(BaseModel):
     @staticmethod
     def getAudioByName(name: str):
         try:
-            audio = Audio.select().where(Audio.name.contains(name)).order_by(Audio.uses)
+            rawAudio = Audio.select().order_by(Audio.uses)
+            audio = list(
+                filter(
+                    lambda aud: (name in aud.name) or (Audio.inArray(name, aud.tags)),
+                    rawAudio,
+                )
+            )
         except Audio.DoesNotExist as e:
             audio = None
         return audio
+
+    @staticmethod
+    def inArray(data, arr):
+        for i in arr:
+            if data in i:
+                return True
+        return False
 
 
 if __name__ == "__main__":
