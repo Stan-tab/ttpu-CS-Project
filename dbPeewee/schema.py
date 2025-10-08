@@ -44,10 +44,27 @@ class Audio(BaseModel):
     uses = IntegerField(default=0)
 
     @staticmethod
-    def updateNameByTgid(id, name):
-        query = Audio.update(name=name).where(Audio.tgId == id)
+    def updateDataByTgid(id, userName, name=None, timing=None, tags=[]):
+        user : User = User.findByUsername(userName)
+        initialData: Audio = Audio.get(Audio.tgId == id, Audio.user==user)
+        name = name or initialData.name
+        timing = timing or initialData.timing
+        tags = tags + initialData.tags
+        print(tags)
+        query = Audio.update(name=name, timing=timing, tags=tags).where(
+            Audio.tgId == id,
+            Audio.user==user
+        )
         query.execute()
-        return Audio.get(Audio.tgId == id)
+        return Audio.get(Audio.tgId == id, Audio.user==user)
+
+    @staticmethod
+    def findByTgid(tgId):
+        try:
+            audio = Audio.select().where(Audio.tgId == tgId).get()
+        except Audio.DoesNotExist:
+            audio = None
+        return audio
 
 
 if __name__ == "__main__":

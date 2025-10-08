@@ -16,6 +16,25 @@ def desiredSentence(lang, pathArr):
     return desiredSentence
 
 
+def createInChangeUser(query, callback_data, action):
+    idContainer = query.message.voice or query.message.audio
+    audioId = idContainer.file_id
+    userInChange[str(callback_data.userId)] = inChange(
+        query.message.message_id, audioId, action
+    )
+
+
+def createCaption(audioData):
+    return f"""
+    Name: {audioData.name}
+Tags: {", ".join(audioData.tags)}
+Uses: {audioData.uses}
+"""
+
+def evaluateTags(string: str):
+    return list(filter(lambda y: bool(y) ,map(lambda x : x.strip(),string.replace("\n", "").split(","))))
+
+
 def toggleDb(fn):
     def wrapper(*arg, **kwarg):
         db.connect()
@@ -36,6 +55,9 @@ def createUser(username, telegram_id):
 
 @toggleDb
 def createAudioPost(audioData, username):
+    isExist = Audio.findByTgid(audioData.get("audioId"))
+    if(bool(isExist)):
+        return isExist.name
     user = User.findByUsername(username)
     audio = Audio.create(
         tgId=audioData.get("audioId"),
@@ -44,11 +66,7 @@ def createAudioPost(audioData, username):
         timing=audioData.get("timing"),
         tags=audioData.get("tags"),
     )
-    return audio
-
-@toggleDb
-def updateAudioName(name, data):
-    return Audio.updateNameByTgid(data.audioId, name)
+    return False
 
 
 class audioFilter:
@@ -60,12 +78,14 @@ class audioFilter:
 
 
 class inChangeFilter:
-    def __init__(self):
-        pass
+    def __init__(self, action):
+        self.action = action
 
     def __call__(self, message):
         try:
             user = userInChange[str(message.from_user.id)]
+            if user.action != self.action:
+                return False
         except KeyError as e:
             return False
         return {"userData": user}
@@ -87,6 +107,7 @@ class SetTimings(CallbackData, prefix="audio"):
 
 
 class inChange:
-    def __init__(self, messageId, audioId):
+    def __init__(self, messageId, audioId, action):
         self.messageId = messageId
         self.audioId = audioId
+        self.action = action
