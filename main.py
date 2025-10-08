@@ -14,6 +14,11 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     KeyboardButton,
     ReplyKeyboardMarkup,
+    InlineQuery,
+    InlineQueryResultCachedVoice,
+    InlineQueryResultArticle,
+    InputTextMessageContent,
+    InputMediaAudio,
 )
 from components.dictioanary import useSentences
 from components.subFunctions import *
@@ -125,7 +130,7 @@ Tags: {", ".join(audioData["tags"]) or 'None'}
 Uses: 0
     """
     isExistedName = createAudioPost(audioData, message.from_user.username)
-    if(bool(isExistedName)):
+    if bool(isExistedName):
         await message.answer(f"We already have this {isExistedName}")
         return
     await sendAudioAnswer(
@@ -188,6 +193,40 @@ async def tagAdder(message: Message, userData: inChange):
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=createButtons(message.from_user.id),
         ),
+    )
+
+
+@dp.inline_query()
+async def showAudio(inline_query: InlineQuery):
+    text = inline_query.query or ""
+    audioData = Audio.getAudioByName(text)
+    if not bool(audioData):
+        await inline_query.answer(
+            results=[
+                InlineQueryResultArticle(
+                    id="1",
+                    title="Sorry",
+                    description="We were unable to find this audio",
+                    input_message_content=InputTextMessageContent(
+                        message_text="We Couldnt find this any results"
+                    ),
+                )
+            ],
+            is_personal=True,
+            cache_time=5,
+        )
+        return
+    results = []
+    for data in audioData:
+        results.append(
+            InlineQueryResultCachedVoice(
+                id=str(data.id), title=data.name, voice_file_id=data.tgId
+            )
+        )
+    await inline_query.answer(
+        results=results,
+        is_personal=True,
+        cache_time=5,
     )
 
 

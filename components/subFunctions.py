@@ -32,12 +32,14 @@ Uses: {audioData.uses}
 """
 
 def evaluateTags(string: str):
-    return list(filter(lambda y: bool(y) ,map(lambda x : x.strip(),string.replace("\n", "").split(","))))
+    return list(filter(lambda y: bool(y) ,map(lambda x : x.strip(),string.replace("\n", "").lower().split(","))))
 
 
 def toggleDb(fn):
     def wrapper(*arg, **kwarg):
+        db.close()
         db.connect()
+        # print(f"{fn.__name__}, 43sub, {arg}, {kwarg}")
         result = fn(*arg, **kwarg)
         db.close()
         return result

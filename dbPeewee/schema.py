@@ -36,7 +36,7 @@ class User(BaseModel):
 
 
 class Audio(BaseModel):
-    tgId = CharField()
+    tgId = CharField(unique=True)
     name = CharField()
     user = ForeignKeyField(User, backref="audio")
     timing = ArrayField(CharField)
@@ -45,24 +45,30 @@ class Audio(BaseModel):
 
     @staticmethod
     def updateDataByTgid(id, userName, name=None, timing=None, tags=[]):
-        user : User = User.findByUsername(userName)
-        initialData: Audio = Audio.get(Audio.tgId == id, Audio.user==user)
+        user: User = User.findByUsername(userName)
+        initialData: Audio = Audio.get(Audio.tgId == id, Audio.user == user)
         name = name or initialData.name
         timing = timing or initialData.timing
         tags = tags + initialData.tags
-        print(tags)
-        query = Audio.update(name=name, timing=timing, tags=tags).where(
-            Audio.tgId == id,
-            Audio.user==user
+        query = Audio.update(name=str(name).lower(), timing=timing, tags=tags).where(
+            Audio.tgId == id, Audio.user == user
         )
         query.execute()
-        return Audio.get(Audio.tgId == id, Audio.user==user)
+        return Audio.get(Audio.tgId == id, Audio.user == user)
 
     @staticmethod
     def findByTgid(tgId):
         try:
             audio = Audio.select().where(Audio.tgId == tgId).get()
         except Audio.DoesNotExist:
+            audio = None
+        return audio
+
+    @staticmethod
+    def getAudioByName(name: str):
+        try:
+            audio = Audio.select().where(Audio.name.contains(name)).order_by(Audio.uses)
+        except Audio.DoesNotExist as e:
             audio = None
         return audio
 
