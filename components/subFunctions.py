@@ -16,10 +16,10 @@ def desiredSentence(lang, pathArr):
     return desiredSentence
 
 
-def createInChangeUser(query, callback_data, action):
+def createInChangeUser(query, action):
     idContainer = query.message.voice or query.message.audio
     audioId = idContainer.file_id
-    userInChange[str(callback_data.userId)] = inChange(
+    userInChange[str(query.message.chat.id)] = inChange(
         query.message.message_id, audioId, action
     )
 
@@ -31,8 +31,14 @@ Tags: {", ".join(audioData.tags)}
 Uses: {audioData.uses}
 """
 
+
 def evaluateTags(string: str):
-    return list(filter(lambda y: bool(y) ,map(lambda x : x.strip(),string.replace("\n", "").lower().split(","))))
+    return list(
+        filter(
+            lambda y: bool(y),
+            map(lambda x: x.strip(), string.replace("\n", "").lower().split(",")),
+        )
+    )
 
 
 def toggleDb(fn):
@@ -58,7 +64,7 @@ def createUser(username, telegram_id):
 @toggleDb
 def createAudioPost(audioData, username):
     isExist = Audio.findByTgid(audioData.get("audioId"))
-    if(bool(isExist)):
+    if bool(isExist):
         return isExist.name
     user = User.findByUsername(username)
     audio = Audio.create(
@@ -103,9 +109,14 @@ class addTags(CallbackData, prefix="audio"):
     userId: int
 
 
-class SetTimings(CallbackData, prefix="audio"):
+# class SetTimings(CallbackData, prefix="audio"):
+#     action: str
+#     userId: int
+
+
+class audioData(CallbackData, prefix="audioData"):
+    id: int
     action: str
-    userId: int
 
 
 class inChange:

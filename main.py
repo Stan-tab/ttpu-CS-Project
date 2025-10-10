@@ -50,7 +50,7 @@ async def sendAudioAnswer(message, audioId, caption, reply_markup):
         )
 
 
-def createButtons(userId):
+def createSetAudioButtons(userId):
     return [
         [
             InlineKeyboardButton(
@@ -80,6 +80,20 @@ def createButtons(userId):
         #     )
         # ],
     ]
+
+
+def createShowAudioButtons(audioArray: list):
+    keyboard = []
+    for audio in audioArray:
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    text=audio.name,
+                    callback_data=audioData(id=audio.id, action="sendAudio").pack(),
+                )
+            ]
+        )
+    return keyboard
 
 
 @dp.message(filters.CommandStart())
@@ -116,7 +130,7 @@ async def getAudio(message: Message):
     name = None
     if bool(message.audio):
         name = message.audio.file_name
-    buttons = createButtons(message.from_user.id)
+    buttons = createSetAudioButtons(message.from_user.id)
     audioData = {
         "user": message.from_user.id,
         "name": name or uuid4(),
@@ -139,23 +153,36 @@ Uses: 0
 
 
 @dp.callback_query(editName.filter(F.action == "edit_name"))
-async def nameEdit(query: CallbackQuery, callback_data: editName, bot: Bot):
+async def nameEdit(query: CallbackQuery,  bot: Bot):
     await bot.send_message(
         text="Enter new name",
-        chat_id=callback_data.userId,
+        chat_id=query.message.chat.id,
         reply_to_message_id=query.message.message_id,
     )
-    createInChangeUser(query, callback_data, "edit_name")
+    createInChangeUser(query, "edit_name")
 
 
 @dp.callback_query(addTags.filter(F.action == "add_tags"))
-async def addTagsQuery(query: CallbackQuery, callback_data: addTags, bot: Bot):
+async def addTagsQuery(query: CallbackQuery, bot: Bot):
     await bot.send_message(
         text="Add tags\nExample:\nfun, modern, cool",
-        chat_id=callback_data.userId,
+        chat_id=query.message.chat.id,
         reply_to_message_id=query.message.message_id,
     )
-    createInChangeUser(query, callback_data, "add_tags")
+    createInChangeUser(query, "add_tags")
+
+
+@dp.callback_query(audioData.filter(F.action == "sendAudio"))
+async def sendAudio(query: CallbackQuery, callback_data: audioData, bot: Bot):
+    audio = Audio.findByid(callback_data.id)
+    await bot.send_voice(
+        chat_id=query.message.chat.id,
+        voice=audio.tgId,
+        caption=createCaption(audio),
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=createSetAudioButtons(query.message.from_user.id)
+        ),
+    )
 
 
 @dp.message(inChangeFilter("edit_name"))
@@ -172,7 +199,7 @@ async def audioName(message: Message, userData: inChange):
         message_id=userData.messageId,
         caption=caption,
         reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=createButtons(message.from_user.id),
+            inline_keyboard=createSetAudioButtons(message.from_user.id),
         ),
     )
 
@@ -191,8 +218,20 @@ async def tagAdder(message: Message, userData: inChange):
         message_id=userData.messageId,
         caption=caption,
         reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=createButtons(message.from_user.id),
+            inline_keyboard=createSetAudioButtons(message.from_user.id),
         ),
+    )
+
+
+@dp.message(F.text == "myAudio")
+async def showAudios(message: Message):
+    audios = Audio.getAudioByUsername(message.from_user.username)
+    if len(audios) == 0:
+        await message.answer("Sry")
+        return
+    keyboard = createShowAudioButtons(audios)
+    await message.answer(
+        "Your audios:", reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
     )
 
 

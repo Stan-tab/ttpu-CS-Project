@@ -63,6 +63,14 @@ class Audio(BaseModel):
         except Audio.DoesNotExist:
             audio = None
         return audio
+    
+    @staticmethod
+    def findByid(id):
+        try:
+            audio = Audio.select().where(Audio.id == id).get()
+        except Audio.DoesNotExist:
+            audio = None
+        return audio
 
     @staticmethod
     def getAudioByName(name: str):
@@ -84,6 +92,12 @@ class Audio(BaseModel):
             if data in i:
                 return True
         return False
+    
+    @staticmethod
+    def getAudioByUsername(username):
+        user = User.findByUsername(username)
+        audios = Audio.select().where(Audio.user == user)
+        return audios
 
 
 if __name__ == "__main__":
