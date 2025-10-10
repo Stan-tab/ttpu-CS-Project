@@ -18,7 +18,6 @@ from aiogram.types import (
     InlineQueryResultCachedVoice,
     InlineQueryResultArticle,
     InputTextMessageContent,
-    InputMediaAudio,
 )
 from components.dictioanary import useSentences
 from components.subFunctions import *
@@ -50,11 +49,11 @@ async def sendAudioAnswer(message, audioId, caption, reply_markup):
         )
 
 
-def createSetAudioButtons(userId):
+def createSetAudioButtons(userId, lan):
     return [
         [
             InlineKeyboardButton(
-                text="Edit name",
+                text=desiredSentence(lan, ["set", "editName"]),
                 callback_data=editName(
                     userId=userId,
                     action="edit_name",
@@ -63,7 +62,7 @@ def createSetAudioButtons(userId):
         ],
         [
             InlineKeyboardButton(
-                text="Add tags",
+                text=desiredSentence(lan, ["set", "addTag"]),
                 callback_data=addTags(
                     userId=userId,
                     action="add_tags",
@@ -100,7 +99,13 @@ def createShowAudioButtons(audioArray: list):
 async def welcome(message: Message):
     createUser(message.from_user.username, message.from_user.id)
     keyboard = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="myAudio")]],
+        keyboard=[
+            [
+                KeyboardButton(
+                    text=desiredSentence(message.from_user.language_code, ["myAudio"])
+                )
+            ]
+        ],
         input_field_placeholder="What audio will you upload...",
         resize_keyboard=True,
     )
@@ -130,7 +135,9 @@ async def getAudio(message: Message):
     name = None
     if bool(message.audio):
         name = message.audio.file_name
-    buttons = createSetAudioButtons(message.from_user.id)
+    buttons = createSetAudioButtons(
+        message.from_user.id, message.from_user.language_code
+    )
     audioData = {
         "user": message.from_user.id,
         "name": name or uuid4(),
@@ -139,13 +146,15 @@ async def getAudio(message: Message):
         "audioId": audioId,
     }
     caption = f"""
-    Name: {audioData['name']}
-Tags: {", ".join(audioData["tags"]) or 'None'}
-Uses: 0
+    {desiredSentence(message.from_user.language_code, ["caption", "name"])}: {audioData['name']}
+{desiredSentence(message.from_user.language_code, ["caption", "tags"])}: {", ".join(audioData["tags"]) or 'None'}
+{desiredSentence(message.from_user.language_code, ["caption", "uses"])}: 0
     """
     isExistedName = createAudioPost(audioData, message.from_user.username)
     if bool(isExistedName):
-        await message.answer(f"We already have this {isExistedName}")
+        await message.answer(
+            f"{desiredSentence(message.from_user.language_code, ['errExist'])} {isExistedName}"
+        )
         return
     await sendAudioAnswer(
         message, audioId, caption, InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -153,9 +162,9 @@ Uses: 0
 
 
 @dp.callback_query(editName.filter(F.action == "edit_name"))
-async def nameEdit(query: CallbackQuery,  bot: Bot):
+async def nameEdit(query: CallbackQuery, bot: Bot):
     await bot.send_message(
-        text="Enter new name",
+        text=desiredSentence(query.from_user.language_code, ["editName"]),
         chat_id=query.message.chat.id,
         reply_to_message_id=query.message.message_id,
     )
@@ -165,7 +174,7 @@ async def nameEdit(query: CallbackQuery,  bot: Bot):
 @dp.callback_query(addTags.filter(F.action == "add_tags"))
 async def addTagsQuery(query: CallbackQuery, bot: Bot):
     await bot.send_message(
-        text="Add tags\nExample:\nfun, modern, cool",
+        text=desiredSentence(query.from_user.language_code, ["addTag"]),
         chat_id=query.message.chat.id,
         reply_to_message_id=query.message.message_id,
     )
@@ -178,9 +187,11 @@ async def sendAudio(query: CallbackQuery, callback_data: audioData, bot: Bot):
     await bot.send_voice(
         chat_id=query.message.chat.id,
         voice=audio.tgId,
-        caption=createCaption(audio),
+        caption=createCaption(audio, query.from_user.language_code),
         reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=createSetAudioButtons(query.message.from_user.id)
+            inline_keyboard=createSetAudioButtons(
+                query.message.from_user.id, query.from_user.language_code
+            )
         ),
     )
 
@@ -193,13 +204,15 @@ async def audioName(message: Message, userData: inChange):
         name=message.text,
         userName=message.from_user.username,
     )
-    caption = createCaption(audioData)
+    caption = createCaption(audioData, message.from_user.language_code)
     await bot.edit_message_caption(
         chat_id=message.chat.id,
         message_id=userData.messageId,
         caption=caption,
         reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=createSetAudioButtons(message.from_user.id),
+            inline_keyboard=createSetAudioButtons(
+                message.from_user.id, message.from_user.language_code
+            ),
         ),
     )
 
@@ -212,26 +225,28 @@ async def tagAdder(message: Message, userData: inChange):
         tags=evaluateTags(message.text),
         userName=message.from_user.username,
     )
-    caption = createCaption(audioData)
+    caption = createCaption(audioData, message.from_user.language_code)
     await bot.edit_message_caption(
         chat_id=message.chat.id,
         message_id=userData.messageId,
         caption=caption,
         reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=createSetAudioButtons(message.from_user.id),
+            inline_keyboard=createSetAudioButtons(
+                message.from_user.id, message.from_user.language_code
+            ),
         ),
     )
 
 
-@dp.message(F.text == "myAudio")
+@dp.message(sentArrFilter(getDataArr(["myAudio"])))
 async def showAudios(message: Message):
     audios = Audio.getAudioByUsername(message.from_user.username)
     if len(audios) == 0:
-        await message.answer("Sry")
+        await message.answer(desiredSentence(message.from_user.language_code, ["errNoAudio"]))
         return
     keyboard = createShowAudioButtons(audios)
     await message.answer(
-        "Your audios:", reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
+        f"{desiredSentence(message.from_user.language_code, ['showAudios'])}:", reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard),
     )
 
 

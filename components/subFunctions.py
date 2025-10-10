@@ -5,6 +5,19 @@ from aiogram.filters.callback_data import CallbackData
 userInChange = {}
 
 
+def getDataArr(path):
+    accumSentences = []
+    accumulator = []
+    for i in sentences:
+        accumulator.append(sentences[i])
+    for dic in accumulator:
+        shortAccum = None
+        for j in path:
+            shortAccum = dic[j]
+        accumSentences.append(shortAccum)
+    return accumSentences
+
+
 def desiredSentence(lang, pathArr):
     desiredSentence = sentences.get(lang)
     if not bool(sentences.get(lang)):
@@ -24,11 +37,11 @@ def createInChangeUser(query, action):
     )
 
 
-def createCaption(audioData):
+def createCaption(audioData, lan):
     return f"""
-    Name: {audioData.name}
-Tags: {", ".join(audioData.tags)}
-Uses: {audioData.uses}
+    {desiredSentence(lan, ["caption", "name"])}: {audioData.name}
+{desiredSentence(lan, ["caption", "tags"])}: {", ".join(audioData.tags)}
+{desiredSentence(lan, ["caption", "uses"])}: {audioData.uses}
 """
 
 
@@ -97,6 +110,16 @@ class inChangeFilter:
         except KeyError as e:
             return False
         return {"userData": user}
+
+
+class sentArrFilter:
+    def __init__(self, arr):
+        self.arr = arr
+
+    def __call__(self, message):
+        if len(list(filter(lambda x: message.text == x, self.arr))) > 0:
+            return True
+        return False
 
 
 class editName(CallbackData, prefix="audio"):
